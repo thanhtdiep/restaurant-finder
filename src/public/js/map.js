@@ -1,5 +1,5 @@
-var map, infoWindow;
-var curLocation, results, markers = [];
+var map, infoWindow, load;
+var curLocation, results, markers = [], infoWindows = [];
 
 function initMap() {
     map = new google.maps.Map(document.getElementById('map'), {
@@ -18,7 +18,7 @@ function handleLocationError(browserHasGeolocation, infoWindow, pos) {
 function search() {
     const content = document.getElementById("search").value;
     if (content) {
-        getResults(content, null, null, function(data) {
+        getResults(content, null, null, function (data) {
             // Clear old markers before put in new ones if any
             if (markers) deleteMarkers();
             displayResults(data);
@@ -34,7 +34,7 @@ function search() {
 function nearby() {
     //  Get current location
     if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(function(position) {
+        navigator.geolocation.getCurrentPosition(function (position) {
             var curLocation = {
                 lat: position.coords.latitude,
                 lng: position.coords.longitude
@@ -46,12 +46,12 @@ function nearby() {
             map.setCenter(curLocation);
             map.setZoom(14);
             //  Search for nearby restaurant
-            getResults(curLocation.lat, curLocation.lng, "search", function(data) {
+            getResults(curLocation.lat, curLocation.lng, "search", function (data) {
                 // Clear old markers before put in new ones if any
                 if (markers) deleteMarkers();
                 displayResults(data);
             });
-        }, function() {
+        }, function () {
             handleLocationError(true, infoWindow, map.getCenter());
         });
     } else {
@@ -71,6 +71,13 @@ function getResults(q1, q2, type, cb) {
     //      cb - the callback function used to pass the object back to the parent function where the object is used for other functions asynchronously 
     // --------------------------------------------------------------------------------------------
     var urlQ = null;
+    $(document).ajaxStart(function () {
+        $("#loader").css("display", "block");
+    });
+
+    $(document).ajaxComplete(function () {
+        $("#loader").css("display", "none");
+    });
     if (q2 && !type) urlQ = "weather/full?lat=" + q1 + "&lon=" + q2
     else if (q2 && type === "search") urlQ = "search/full?lat=" + q1 + "&lon=" + q2
     else urlQ = "search/full?q=" + q1;
@@ -122,41 +129,41 @@ function createInfoWindowTemplate(props, data) {
         "</div><img src='img/arrow-right.png' class='next' alt='Next'>" +
         "</div>";
     contentStr +=
-        '<p >Cuisines: '+ props.cuisines + '</p>' +
+        '<p >Cuisines: ' + props.cuisines + '</p>' +
         '<p >Open hours: ' + props.timings + '</p>' +
-        '<p >Address: ' + props.address +' '+ props.zipcode + '</p>' +
+        '<p >Address: ' + props.address + ' ' + props.zipcode + '</p>' +
         '<p >Contact: ' + props.phone_numbers + '</p>';
 
     // An infoWindow template for each marker
     var weatherStr =
-        '<div class="weather-form">'+
-        '<div class="weather-text"><img src="http://openweathermap.org/img/wn/'+ data[0].icon +'@2x.png">' + data[0].weather + 
+        '<div class="weather-form">' +
+        '<div class="weather-text"><img src="http://openweathermap.org/img/wn/' + data[0].icon + '@2x.png">' + data[0].weather +
         '<p class="text">Temperature: ' + data[0].temp + ' Celsius</p>' +
         '<p class="text">Wind Speed: ' + data[0].wind_speed + ' km/h</p>' +
         '<p class="text">Humidity: ' + data[0].humidity + ' g/m3</p>' +
         '</div>' +
         '</div>';
     contentStr += weatherStr;
-     for (var i =0; i< props.reviews.length; i++){
-        contentStr += 
-        '<div class="reviewForm">'+
-        '<div class="profile-name" >'+ '<a href="'+ props.reviews[i].review.user.profile_url+'">'+
-        '<img class="profile-img" src="'+ props.reviews[i].review.user.profile_image+'">'+ '</a>' +
-        props.reviews[i].review.user.name +
-        '<div class="rating">'+ props.reviews[i].review.rating+ '/5<img class="star" src="img/star.png"></div>'+
-        '<div class="rating-text">'+ props.reviews[i].review.rating_text+ '</div>'+
-        '</div>'+
-        '<div class="review-time">'+ props.reviews[i].review.review_time_friendly+ '</div>'+
-        '<div class="review-text"> \"'+ props.reviews[i].review.review_text+ '\" </div>'+
-        '</div>';
-     }
+    for (var i = 0; i < props.reviews.length; i++) {
+        contentStr +=
+            '<div class="reviewForm">' +
+            '<div class="profile-name" >' + '<a href="' + props.reviews[i].review.user.profile_url + '">' +
+            '<img class="profile-img" src="' + props.reviews[i].review.user.profile_image + '">' + '</a>' +
+            props.reviews[i].review.user.name +
+            '<div class="rating">' + props.reviews[i].review.rating + '/5<img class="star" src="img/star.png"></div>' +
+            '<div class="rating-text">' + props.reviews[i].review.rating_text + '</div>' +
+            '</div>' +
+            '<div class="review-time">' + props.reviews[i].review.review_time_friendly + '</div>' +
+            '<div class="review-text"> \"' + props.reviews[i].review.review_text + '\" </div>' +
+            '</div>';
+    }
     return contentStr;
 }
 
 function imageSlider() {
     // JQuery create back and next button on images sliders
-    $(document).ready(function() {
-        $('.next').on('click', function() {
+    $(document).ready(function () {
+        $('.next').on('click', function () {
             var currentImg = $('.active');
             var nextImg = currentImg.next();
 
@@ -166,7 +173,7 @@ function imageSlider() {
             }
         })
 
-        $('.prev').on('click', function() {
+        $('.prev').on('click', function () {
             var currentImg = $('.active');
             var prevImg = currentImg.prev();
 
@@ -180,21 +187,37 @@ function imageSlider() {
 
 function addMarker(props) {
     var marker = new google.maps.Marker({
-            position: { lat: parseFloat(props.lat), lng: parseFloat(props.lng) },
-            map: map,
-            icon: './img/restaurant.png'
-        })
-        // Push new marker into marker array
+        position: { lat: parseFloat(props.lat), lng: parseFloat(props.lng) },
+        map: map,
+        icon: './img/restaurant.png'
+    })
+    // Push new marker into marker array
     markers.push(marker);
     // GET request to OpenWeather API when marker is clicked
-    marker.addListener('click', function() {
-        getResults(props.lat, props.lng, null, function(data) {
+    marker.addListener('click', function () {
+        console.log(infoWindows);
+        getResults(props.lat, props.lng, null, function (data) {
             var contentStr = createInfoWindowTemplate(props, data);
             imageSlider();
+            if (infoWindows[0]) {
+                console.log("closed");
+                infoWindows[0].close();
+                infoWindows.pop();
+            }
             var infoWindow = new google.maps.InfoWindow({
                 content: contentStr
             })
+            infoWindows.push(infoWindow);
             infoWindow.open(map, marker);
         });
     })
+}
+
+function pageTransition() {
+    load = setTimeout(showPage, window.onload);
+}
+
+function showPage() {
+    document.getElementById("loader").style.display = "none";
+    document.getElementById("main").style.display = "block";
 }

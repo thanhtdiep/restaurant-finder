@@ -10,7 +10,8 @@
     <link rel="stylesheet" href="css/styles.css" />
 </head>
 
-<body>
+<body onload="pageTransition()" style="margin:0;">
+    <div id="loader"></div>
     <header>
         <!-- navigation links -->
         <nav class="navbar navbar-expand-sm bg-light">
@@ -23,7 +24,7 @@
     </header>
 
     <!-- the content -->
-    <main>
+    <main style="display: none;" id="main">
         <section>
             <div id="map"></div>
             <div id="form">

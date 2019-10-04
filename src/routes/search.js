@@ -58,7 +58,8 @@ router.get('/full', (req, res) => {
 const zomato_api = process.env.ZOMATO_API_KEY;
 const zomato = {
     user_key: 'd06ef3a90843fc9361dbe4f19e9e7841',
-    radius: 2000,
+    radius: 1000000,
+    count: 10000,
 }
 
 function createZomatoOptions(q1, q2) {
@@ -73,13 +74,15 @@ function createZomatoOptions(q1, q2) {
         str =
             'lat=' + q1 +
             '&lon=' + q2 +
-            '&radius=' + zomato.radius +
+            // '&radius=' + zomato.radius +
+            '&count=' + zomato.count +
             '&apikey=' + zomato.user_key;
     } else {
         str =
             'q=' + q1 +
-            '&apikey=' + zomato.user_key +
-            '&radius=' + zomato.radius;
+            '&count=' + zomato.count +
+            '&apikey=' + zomato.user_key;
+            // '&radius=' + zomato.radius;
     }
     options.path += str;
     return options;
