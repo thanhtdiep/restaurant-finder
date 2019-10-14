@@ -71,6 +71,7 @@ function getResults(q1, q2, type, cb) {
     //      cb - the callback function used to pass the object back to the parent function where the object is used for other functions asynchronously 
     // --------------------------------------------------------------------------------------------
     var urlQ = null;
+    // Loading unpon ajax request
     $(document).ajaxStart(function () {
         $("#loader").css("display", "block");
     });
@@ -78,6 +79,7 @@ function getResults(q1, q2, type, cb) {
     $(document).ajaxComplete(function () {
         $("#loader").css("display", "none");
     });
+
     if (q2 && !type) urlQ = "weather/full?lat=" + q1 + "&lon=" + q2
     else if (q2 && type === "search") urlQ = "search/full?lat=" + q1 + "&lon=" + q2
     else urlQ = "search/full?q=" + q1;
@@ -93,10 +95,10 @@ function getResults(q1, q2, type, cb) {
 }
 
 function displayResults(data) {
-    for (var i = 0; i < data.length; i++) {
+    document.getElementById("total").textContent = data[0].total;
+    for (var i = 1; i < data.length; i++) {
         addMarker(data[i]);
     }
-
 }
 
 // Sets the map on all markers in the array.
@@ -195,12 +197,10 @@ function addMarker(props) {
     markers.push(marker);
     // GET request to OpenWeather API when marker is clicked
     marker.addListener('click', function () {
-        console.log(infoWindows);
         getResults(props.lat, props.lng, null, function (data) {
             var contentStr = createInfoWindowTemplate(props, data);
             imageSlider();
             if (infoWindows[0]) {
-                console.log("closed");
                 infoWindows[0].close();
                 infoWindows.pop();
             }

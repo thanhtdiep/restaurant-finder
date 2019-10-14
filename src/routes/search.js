@@ -97,10 +97,12 @@ function filter(res) {
     //    data - filtered/simplified and stringtified JSON object 
     // --------------------------------------------------------------------------------------------
     const content = JSON.parse(res).restaurants;
+    var total_results = JSON.parse(res).results_found;
     var data = [];
     for (var x in content) {
         const reviewContent = content[x].restaurant.all_reviews;
         var obj = {
+            total : total_results,
             name: content[x].restaurant.name,
             cuisines: content[x].restaurant.cuisines,
             address: content[x].restaurant.location.address,
@@ -115,6 +117,5 @@ function filter(res) {
         data.push(obj);
     }
     return data;
-
 }
 module.exports = router;
