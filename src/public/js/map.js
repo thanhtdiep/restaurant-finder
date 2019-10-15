@@ -95,9 +95,15 @@ function getResults(q1, q2, type, cb) {
 }
 
 function displayResults(data) {
-    document.getElementById("total").textContent = data[0].total;
-    for (var i = 1; i < data.length; i++) {
-        addMarker(data[i]);
+    if (Array.isArray(data) && data.length) {
+        document.getElementById("total").textContent = data[0].total;
+        for (var i = 0; i < data.length; i++) {
+            addMarker(data[i]);
+        }
+    }
+    else {
+        // Need to add error handling instead of just console.log [IMPORTANT]
+        console.log('No results found');
     }
 }
 
