@@ -95,7 +95,8 @@ function getResults(q1, q2, type, cb) {
 }
 
 function displayResults(data) {
-    if (Array.isArray(data) && data.length) {
+    if (data[0] !== 0) {
+        console.log(data.source);
         document.getElementById("total").textContent = data[0].total;
         for (var i = 0; i < data.length; i++) {
             addMarker(data[i]);

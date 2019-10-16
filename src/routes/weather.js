@@ -2,6 +2,29 @@ var express = require('express');
 var router = express.Router();
 const axios = require('axios');
 
+/* Persistence dependencies */
+const redis = require('redis');
+const AWS = require('aws-sdk');
+
+// Cloud Services Set-up
+// Create unique bucket name
+const bucketName = 'bennydiep-openweather-store';
+
+// Create a promise on S3 service object
+const bucketPromise = new AWS.S3({ apiVersion: '2006-03-01' }).createBucket({ Bucket: bucketName }).promise();
+bucketPromise.then(function (data) {
+    console.log("Successfully created " + bucketName);
+})
+    .catch(function (err) {
+        console.error(err, err.stack);
+    });
+
+// This section will change for Cloud Services
+const redisClient = redis.createClient();
+
+redisClient.on('error', (err) => {
+    console.log("Error " + err);
+})
 
 router.get('/full', (req, res) => {
     // --------------------------------------------------------------------------------------------
@@ -9,32 +32,67 @@ router.get('/full', (req, res) => {
     // --------------------------------------------------------------------------------------------
     const options = createOWOptions(req.query['lat'], req.query['lon']);
     const url = `https://${options.hostname}${options.path}`;
-    axios.get(url)
-        .then((response) => {
-            res.writeHead(response.status, { 'content-type': 'application/json' });
-            return response.data;
-        })
-        .then((rsp) => {
-            const result = filter(JSON.stringify(rsp));
-            res.end(JSON.stringify(result));
-        })
-        .catch((error) => {
-            if (error.message) {
-                // Request made and server responded
-                console.log(error.response.data);
-                console.log(error.response.status);
-                console.log(error.response.headers);
-            } else if (error.request) {
-                // The request was made but no response received
-                console.log("No repsonse for: " + error.request);
-                res.sendStatus(204).json({ message: "No response from OpenWeather API" });
-            } else {
-                //  Something happenned in setting up the request that trigged an Error
-                console.log('Error', error.message);
-                res.sendStatus(400).json({ message: error.message });
-            }
-        })
+    const redisKey = `weather:${req.query['lat']}-${req.query['lon']}`;
+    /* Search for existing results in Redis */
+    return redisClient.get(redisKey, (err, result) => {
+        if (result) {
+            console.log('Weather:Served from Redis');
+            // Serve from Redis
+            const resultJSON = JSON.parse(result);
+            return res.status(200).json({source: 'Redis Cache', ...resultJSON,});
+        } else {
+            const params = { Bucket: bucketName, Key: redisKey };
+            return new AWS.S3({ apiVersion: '2006-03-01' }).getObject(params, (err, result) => {
+                if (result) {
+                    console.log('Weather:Served from S3');
+                    //Serve from S3
+                    const resultJSON = JSON.parse(result.Body);
+                    //Save to Redis Cache
+                    redisClient.setex(redisKey, 3600, JSON.stringify(resultJSON));
+                    console.log('Weather:Saved to Redis Cache');
+                    return res.status(200).json({source: 'S3 Storage', ...resultJSON,});
+                } else {
+                    // Serve from Zomato API and store in S3
+                    axios.get(url)
+                        .then((response) => {
+                            // res.writeHead(response.status, { 'content-type': 'application/json' });
+                            return response.data;
+                        })
+                        .then((rsp) => {
+                            console.log('Weather:Served from APIs');
+                            const responseJSON = filter(JSON.stringify(rsp));
+                            // Save to Redis Cache
+                            redisClient.setex(redisKey, 3600, JSON.stringify(responseJSON));
+                            console.log('Weather:Saved to Redis');
+                            // Save to S3 
+                            const body = JSON.stringify(responseJSON);
+                            const objectParams = { Bucket: bucketName, Key: redisKey, Body: body };
+                            const uploadPromise = new AWS.S3({ apiVersion: '2006-03-01' }).putObject(objectParams).promise();
+                            uploadPromise.then(function (data) {
+                                console.log("Successfully uploaded data to " + bucketName + "/" + redisKey);
+                            });
+                            return res.status(200).json({ source: 'OpenWeather API', ...responseJSON, });
+                        })
+                        .catch((error) => {
+                            if (error.message) {
+                                // Request made and server responded
+                                console.log("Error:" + error.message);
+                            } else if (error.request) {
+                                // The request was made but no response received
+                                console.log("No repsonse for: " + error.request);
+                                res.sendStatus(204).json({ message: "No response from OpenWeather API" });
+                            } else {
+                                //  Something happenned in setting up the request that trigged an Error
+                                console.log('Error', error.message);
+                                res.sendStatus(400).json({ message: error.message });
+                            }
+                        });
+                }
+            });
+        }
+    });
 });
+
 
 const openWeather = {
     user_key: 'c17209fc211ed03b332022bd87d8933b',
