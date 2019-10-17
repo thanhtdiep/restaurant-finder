@@ -44,13 +44,14 @@ router.get('/full', (req, res) => {
     // GET request to Zomato API
     // --------------------------------------------------------------------------------------------
     var options = null;
+    var q3 = req.query['entity_id'];
     if (req.query['lat'] && req.query['lon']) {
         options = createZomatoOptions(req.query['lat'], req.query['lon']);
         redisKey = `location:${req.query['lat']}-${req.query['lon']}`;
     }
     else if (req.query['q']) {
-        options = createZomatoOptions(req.query['q'], null)
-        redisKey = `restaurant:${req.query['q']}`;
+        options = createZomatoOptions(req.query['q'], null, q3)
+        redisKey = `restaurant:${req.query['q']}-${q3}`;
     }
     else
         console.log('Error: No match query');
@@ -117,7 +118,7 @@ const zomato = {
     count: 10000,
 }
 
-function createZomatoOptions(q1, q2) {
+function createZomatoOptions(q1, q2, q3) {
     const options = {
         hostname: 'developers.zomato.com',
         port: 443,
@@ -131,11 +132,15 @@ function createZomatoOptions(q1, q2) {
             '&lon=' + q2 +
             // '&radius=' + zomato.radius +
             '&count=' + zomato.count +
+            '&entity_id=' + q3 +
+            '&entity_type=' + 'city' +
             '&apikey=' + zomato.user_key;
     } else {
         str =
             'q=' + q1 +
             '&count=' + zomato.count +
+            '&entity_id=' + q3 +
+            '&entity_type=' + 'city' +
             '&apikey=' + zomato.user_key;
         // '&radius=' + zomato.radius;
     }

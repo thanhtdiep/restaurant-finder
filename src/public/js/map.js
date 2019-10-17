@@ -4,7 +4,7 @@ var curLocation, results, markers = [], infoWindows = [];
 function initMap() {
     map = new google.maps.Map(document.getElementById('map'), {
         center: { lat: -27.470125, lng: 153.021072 },
-        zoom: 8
+        zoom: 5
     });
     infoWindow = new google.maps.InfoWindow();
 }
@@ -76,6 +76,7 @@ function getResults(q1, q2, type, cb) {
     //      cb - the callback function used to pass the object back to the parent function where the object is used for other functions asynchronously 
     // --------------------------------------------------------------------------------------------
     var urlQ = null;
+    var q3 = document.getElementById('dropdown').value;
     // Loading unpon ajax request
     $(document).ajaxStart(function () {
         $("#loader").css("display", "block");
@@ -85,9 +86,9 @@ function getResults(q1, q2, type, cb) {
         $("#loader").css("display", "none");
     });
 
-    if (q2 && !type) urlQ = "weather/full?lat=" + q1 + "&lon=" + q2
-    else if (q2 && type === "search") urlQ = "search/full?lat=" + q1 + "&lon=" + q2
-    else urlQ = "search/full?q=" + q1;
+    if (q2 && !type) urlQ = "weather/full?lat=" + q1 + "&lon=" + q2;
+    else if (q2 && type === "search") urlQ = "search/full?lat=" + q1 + "&lon=" + q2 + "&entity_id=" + q3;
+    else urlQ = "search/full?q=" + q1 + "&entity_id=" + q3;
     $.ajax({
         url: urlQ,
         type: 'GET',
@@ -133,14 +134,14 @@ function deleteMarkers() {
 
 function createInfoWindowTemplate(props, data) {
     var contentStr = '<h1>' + props.name + '</h1>' +
-        '<div class="slideshow-container"><img src="img/arrow-left.png" class="prev" alt="Prev"><div class="slider"><img src=' + props.photos[0].photo.url + ' class="active" alt="" style="width:100%">';
+        '<div class="slideshow-container"><img id="left" src="img/arrow-left.png" class="prev" alt="Prev"><div class="slider"><img src=' + props.photos[0].photo.url + ' class="active" alt="" style="width:100%">';
     //  Loop through all the images and add in string 
     for (var i = 1; i < props.photos.length; i++) {
         contentStr +=
             "<img src='" + props.photos[i].photo.url + "' alt='' style='width:100%'>";
     }
     contentStr +=
-        "</div><img src='img/arrow-right.png' class='next' alt='Next'>" +
+        "</div><img id='right' src='img/arrow-right.png' class='next' alt='Next'>" +
         "</div>";
     contentStr +=
         '<p >Cuisines: ' + props.cuisines + '</p>' +
