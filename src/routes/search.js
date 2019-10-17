@@ -58,7 +58,6 @@ router.get('/full', (req, res) => {
     /* Search for existing results in Redis */
     return redisClient.get(redisKey, (err, result) => {
         if (result) {
-            console.log('Served from Redis');
             // Serve from Redis
             const resultJSON = JSON.parse(result);
             return res.status(200).json({source: 'Redis Cache', ...resultJSON,});
@@ -66,12 +65,10 @@ router.get('/full', (req, res) => {
             const params = { Bucket: bucketName, Key: redisKey };
             return new AWS.S3({ apiVersion: '2006-03-01' }).getObject(params, (err, result) => {
                 if (result) {
-                    console.log('Served from S3');
                     //Serve from S3
                     const resultJSON = JSON.parse(result.Body);
                     //Save to Redis Cache
                     redisClient.setex(redisKey, 3600, JSON.stringify(resultJSON));
-                    console.log('Saved to Redis Cache');
                     return res.status(200).json({source: 'S3 Storage', ...resultJSON,});
                 } else {
                     // Serve from Zomato API and store in S3
@@ -81,11 +78,9 @@ router.get('/full', (req, res) => {
                             return response.data;
                         })
                         .then((rsp) => {
-                            console.log('Served from APIs');
                             const responseJSON = filter(JSON.stringify(rsp));
                             // Save to Redis Cache
                             redisClient.setex(redisKey, 3600, JSON.stringify(responseJSON));
-                            console.log('Saved to Redis');
                             // Save to S3 
                             const body = JSON.stringify(responseJSON);
                             const objectParams = { Bucket: bucketName, Key: redisKey, Body: body };

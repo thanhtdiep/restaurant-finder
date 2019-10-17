@@ -21,9 +21,14 @@ function search() {
         getResults(content, null, null, function (data) {
             // Clear old markers before put in new ones if any
             if (markers) deleteMarkers();
-            displayResults(data);
-            map.setCenter({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lng) });
-            map.setZoom(14);
+            if (data.length !== 0){
+                displayResults(data);
+                map.setCenter({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lng) });
+                map.setZoom(12);
+            } else {
+                alert("No results found");
+            }
+            
         });
     } else {
         alert("Please type in your search keys!");
@@ -95,7 +100,7 @@ function getResults(q1, q2, type, cb) {
 }
 
 function displayResults(data) {
-    if (data[0] !== 0) {
+    if (data.length !== 0) {
         console.log(data.source);
         document.getElementById("total").textContent = data[0].total;
         for (var i = 0; i < data.length; i++) {
