@@ -133,6 +133,7 @@ function deleteMarkers() {
 }
 
 function createInfoWindowTemplate(props, data) {
+    if (props.photos[0].photo.url){
     var contentStr = '<h1>' + props.name + '</h1>' +
         '<div class="slideshow-container"><img id="left" src="img/arrow-left.png" class="prev" alt="Prev"><div class="slider"><img src=' + props.photos[0].photo.url + ' class="active" alt="" style="width:100%">';
     //  Loop through all the images and add in string 
@@ -148,7 +149,7 @@ function createInfoWindowTemplate(props, data) {
         '<p >Open hours: ' + props.timings + '</p>' +
         '<p >Address: ' + props.address + ' ' + props.zipcode + '</p>' +
         '<p >Contact: ' + props.phone_numbers + '</p>';
-
+    }
     // An infoWindow template for each marker
     var weatherStr =
         '<div class="weather-form">' +
