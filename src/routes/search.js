@@ -46,7 +46,7 @@ router.get('/full', (req, res) => {
     var options = null;
     var q3 = req.query['entity_id'];
     if (req.query['lat'] && req.query['lon']) {
-        options = createZomatoOptions(req.query['lat'], req.query['lon']);
+        options = createZomatoOptions(req.query['lat'], req.query['lon'], null);
         redisKey = `location:${req.query['lat']}-${req.query['lon']}`;
     }
     else if (req.query['q']) {
@@ -132,8 +132,6 @@ function createZomatoOptions(q1, q2, q3) {
             '&lon=' + q2 +
             // '&radius=' + zomato.radius +
             '&count=' + zomato.count +
-            '&entity_id=' + q3 +
-            '&entity_type=' + 'city' +
             '&apikey=' + zomato.user_key;
     } else {
         str =

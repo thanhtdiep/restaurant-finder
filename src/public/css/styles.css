@@ -298,14 +298,14 @@ h1 {
 }
 
 #left {
-    position: absolute;
+    position: relative;
     left: 7%;
     width: 8%;
     height: 8%;
 }
 
 #right {
-    position: absolute;
+    position: relative;
     right:7%;
     width: 8%;
     height: 8%;

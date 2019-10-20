@@ -87,7 +87,7 @@ function getResults(q1, q2, type, cb) {
     });
 
     if (q2 && !type) urlQ = "weather/full?lat=" + q1 + "&lon=" + q2;
-    else if (q2 && type === "search") urlQ = "search/full?lat=" + q1 + "&lon=" + q2 + "&entity_id=" + q3;
+    else if (q2 && type === "search") urlQ = "search/full?lat=" + q1 + "&lon=" + q2;
     else urlQ = "search/full?q=" + q1 + "&entity_id=" + q3;
     $.ajax({
         url: urlQ,
