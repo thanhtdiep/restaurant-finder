@@ -4,20 +4,20 @@ const axios = require('axios');
 
 /* Persistence dependencies */
 const redis = require('redis');
-const AWS = require('aws-sdk');
+// const AWS = require('aws-sdk');
 
 // Cloud Services Set-up
 // Create unique bucket name
 const bucketName = 'bennydiep-openweather-store';
 
 // Create a promise on S3 service object
-const bucketPromise = new AWS.S3({ apiVersion: '2006-03-01' }).createBucket({ Bucket: bucketName }).promise();
-bucketPromise.then(function (data) {
-    console.log("Successfully created " + bucketName);
-})
-    .catch(function (err) {
-        console.error(err, err.stack);
-    });
+// const bucketPromise = new AWS.S3({ apiVersion: '2006-03-01' }).createBucket({ Bucket: bucketName }).promise();
+// bucketPromise.then(function (data) {
+//     console.log("Successfully created " + bucketName);
+// })
+//     .catch(function (err) {
+//         console.error(err, err.stack);
+//     });
 
 // This section will change for Cloud Services
 const redisClient = redis.createClient();

@@ -16,6 +16,8 @@
     "http-errors": "~1.6.3",
     "jade": "~1.11.0",
     "jquery": "^3.4.1",
+    "mongodb": "^2.2.33",
+    "mongoskin": "^2.1.0",
     "morgan": "~1.9.1",
     "redi": "^0.1.0",
     "redis": "^2.8.0"
