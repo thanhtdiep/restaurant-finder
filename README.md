@@ -1,5 +1,5 @@
 # Restaurant-Finder (CAB432 Assignment 2)
-
+## Note: Check report for UI snapshots
 ## Objective:
 - To  explore  a  scalable,  load-balanced  cloud  application  with  a  stateless  architecture
 
