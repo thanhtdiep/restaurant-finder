@@ -214,6 +214,7 @@ function addMarker(props) {
     marker.addListener('click', function () {
         getResults(props.lat, props.lng, null, function (data) {
             var contentStr = createInfoWindowTemplate(props, data);
+            console.log(data);
             imageSlider();
             if (infoWindows[0]) {
                 infoWindows[0].close();

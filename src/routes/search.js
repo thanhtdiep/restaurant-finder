@@ -15,15 +15,6 @@ const redis = require('redis');
 // Create unique bucket name
 const bucketName = 'bennydiep-restaurantfinder-store';
 
-// Create a promise on S3 service object
-// const bucketPromise = new AWS.S3({ apiVersion: '2006-03-01' }).createBucket({ Bucket: bucketName }).promise();
-// bucketPromise.then(function (data) {
-//     console.log("Successfully created " + bucketName);
-// })
-//     .catch(function (err) {
-//         console.error(err, err.stack);
-//     });
-
 // This section will change for Cloud Services
 const redisClient = redis.createClient();
 
@@ -68,20 +59,20 @@ router.get('/full', (req, res) => {
             const resultJSON = JSON.parse(result);
             return res.status(200).json({ source: 'Redis Cache', ...resultJSON, });
         } else {
+            console.log("No data in Redis");
             const params = { Bucket: bucketName, Key: redisKey };
             // GET result from mongodb
             // ----------------------------------------------------------------
             MongoClient.connect(url_mongodb, function (err, db) {
                 if (err) throw err;
-                const dbo = db.db("local");
-                return dbo.collection('search').findOne({ Key: `${redisKey}`}, function(err, result) { 
+                const dbo = db.db("restaurant");
+                return dbo.collection('zomato').findOne({ Key: `${redisKey}`}, function(err, result) { 
                     if (err) throw err;
                     if (result) {
-                        console.log("From MongDB");
                         const resultJSON = JSON.parse(result.Body);
                         // Save to Redis Cache
                         redisClient.setex(redisKey, 3000, JSON.stringify(resultJSON));
-                        return res.status(200).json({ source: 'MongoDB', ...resultJSON });
+                        return res.status(200).json({ source: 'MongoDB', ...resultJSON, });
                     } else {
                         // Serve from Zomato API and store in S3
                         axios.get(url)
@@ -89,7 +80,6 @@ router.get('/full', (req, res) => {
                                 return response.data;
                             })
                             .then((rsp) => {
-                                console.log("From API");
                                 const responseJSON = filter(JSON.stringify(rsp));
                                 // Save to Redis Cache
                                 redisClient.setex(redisKey, 3600, JSON.stringify(responseJSON));
@@ -98,8 +88,8 @@ router.get('/full', (req, res) => {
                                 const objectParams = { Bucket: bucketName, Key: redisKey, Body: body };
                                 MongoClient.connect(url_mongodb, function (err, db) {
                                     if (err) throw err;
-                                    var dbo = db.db("local");
-                                    dbo.collection("search").insertOne(objectParams, function (err, res) {
+                                    var dbo = db.db("restaurant");
+                                    dbo.collection("zomato").insertOne(objectParams, function (err, res) {
                                         if (err) throw err;
                                         console.log("1 document inserted");
                                         db.close();
@@ -122,66 +112,9 @@ router.get('/full', (req, res) => {
                                 }
                             });
                     }
-
                     db.close();
                 });
             });
-            // ----------------------------------------------------------------
-            // // Get result from S3
-            // return new AWS.S3({ apiVersion: '2006-03-01' }).getObject(params, (err, result) => {
-            //     if (result) {
-            //         //Serve from S3
-            //         const resultJSON = JSON.parse(result.Body);
-            //         //Save to Redis Cache
-            //         redisClient.setex(redisKey, 3600, JSON.stringify(resultJSON));
-            //         //Save to MongoDB
-            //         db.collection('search').insert(resultJSON, function (err, record) {
-            //             if (err) throw error;
-            //             console.log("Data Saved to MongoDB");
-            //         });
-            //         return res.status(200).json({ source: 'S3 Storage', ...resultJSON, });
-            //     } else {
-            //         // Serve from Zomato API and store in S3
-            //         axios.get(url)
-            //             .then((response) => {
-            //                 // res.writeHead(response.status, { 'content-type': 'application/json' });
-            //                 return response.data;
-            //             })
-            //             .then((rsp) => {
-            //                 const responseJSON = filter(JSON.stringify(rsp));
-            //                 // Save to Redis Cache
-            //                 redisClient.setex(redisKey, 3600, JSON.stringify(responseJSON));
-            //                 // Save to S3 
-            //                 const body = JSON.stringify(responseJSON);
-            //                 const objectParams = { Bucket: bucketName, Key: redisKey, Body: body };
-
-            //                 const uploadPromise = new AWS.S3({ apiVersion: '2006-03-01' }).putObject(objectParams).promise();
-            //                 uploadPromise.then(function (data) {
-            //                     console.log("Successfully uploaded data to " + bucketName + "/" + redisKey);
-            //                 });
-            //                 //Save to MongoDB
-            //                 db.collection('search').insert(objectParams, function (err, record) {
-            //                     if (err) throw error;
-            //                     console.log("Data saved to MongoDB");
-            //                 });
-            //                 return res.status(200).json({ source: 'Zomato API', ...responseJSON, });
-            //             })
-            //             .catch((error) => {
-            //                 if (error.message) {
-            //                     // Request made and server responded
-            //                     console.log("Error:" + error.message);
-            //                 } else if (error.request) {
-            //                     // The request was made but no response received
-            //                     console.log("No repsonse for: " + error.request);
-            //                     res.sendStatus(204).json({ message: "No response from Zomato API" });
-            //                 } else {
-            //                     //  Something happenned in setting up the request that trigged an Error
-            //                     console.log('Error', error.message);
-            //                     res.sendStatus(400).json({ message: error.message });
-            //                 }
-            //             });
-            //     }
-            // });
         }
     });
 });

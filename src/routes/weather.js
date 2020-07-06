@@ -6,18 +6,13 @@ const axios = require('axios');
 const redis = require('redis');
 // const AWS = require('aws-sdk');
 
+// MongoDB
+const MongoClient = require('mongodb').MongoClient;
+const url_mongodb = "mongodb://localhost:27017/";
+
 // Cloud Services Set-up
 // Create unique bucket name
 const bucketName = 'bennydiep-openweather-store';
-
-// Create a promise on S3 service object
-// const bucketPromise = new AWS.S3({ apiVersion: '2006-03-01' }).createBucket({ Bucket: bucketName }).promise();
-// bucketPromise.then(function (data) {
-//     console.log("Successfully created " + bucketName);
-// })
-//     .catch(function (err) {
-//         console.error(err, err.stack);
-//     });
 
 // This section will change for Cloud Services
 const redisClient = redis.createClient();
@@ -34,55 +29,69 @@ router.get('/full', (req, res) => {
     const url = `https://${options.hostname}${options.path}`;
     const redisKey = `weather:${req.query['lat']}-${req.query['lon']}`;
     /* Search for existing results in Redis */
+    console.log("Before querying Redis");
     return redisClient.get(redisKey, (err, result) => {
         if (result) {
             // Serve from Redis
             const resultJSON = JSON.parse(result);
             return res.status(200).json({source: 'Redis Cache', ...resultJSON,});
         } else {
+            console.log("checking mongo");
+            // Check mongoDB for existing data
             const params = { Bucket: bucketName, Key: redisKey };
-            return new AWS.S3({ apiVersion: '2006-03-01' }).getObject(params, (err, result) => {
-                if (result) {
-                    //Serve from S3
-                    const resultJSON = JSON.parse(result.Body);
-                    //Save to Redis Cache
-                    redisClient.setex(redisKey, 3600, JSON.stringify(resultJSON));
-                    return res.status(200).json({source: 'S3 Storage', ...resultJSON,});
-                } else {
-                    // Serve from Zomato API and store in S3
-                    axios.get(url)
-                        .then((response) => {
-                            // res.writeHead(response.status, { 'content-type': 'application/json' });
-                            return response.data;
-                        })
-                        .then((rsp) => {
-                            const responseJSON = filter(JSON.stringify(rsp));
-                            // Save to Redis Cache
-                            redisClient.setex(redisKey, 3600, JSON.stringify(responseJSON));
-                            // Save to S3 
-                            const body = JSON.stringify(responseJSON);
-                            const objectParams = { Bucket: bucketName, Key: redisKey, Body: body };
-                            const uploadPromise = new AWS.S3({ apiVersion: '2006-03-01' }).putObject(objectParams).promise();
-                            uploadPromise.then(function (data) {
-                                console.log("Successfully uploaded data to " + bucketName + "/" + redisKey);
+            MongoClient.connect(url_mongodb, function (err, db) {
+                if (err) throw err;
+                const dbo = db.db('restaurant');
+                return dbo.collection('weather').findOne({ Key: `${redisKey}`}, function (err, result) {
+                    if (err) throw err;
+                    if (result) {
+                        console.log("saving data to redis");
+                        const resultJSON = JSON.parse(result.Body);
+                        // Save to Redis Cache
+                        redisClient.setex(redisKey, 3000, JSON.stringify(resultJSON));
+                        return res.status(200).json({ source: 'MongoDB', ...resultJSON});
+                    } else {
+                        // Serve from Zomato API and store in S3
+                        console.log("calling api");
+                        axios.get(url)
+                            .then((response) => {
+                                return response.data;
+                            })
+                            .then ((rsp) => {
+                                const responseJSON = filter(JSON.stringify(rsp));
+                                // Save to Redis Cache
+                                redisClient.setex(redisKey, 3600, JSON.stringify(responseJSON));
+                                // Save to mongodDB
+                                const body = JSON.stringify(responseJSON);
+                                const objectParams = { Bucket: bucketName, Key: redisKey, Body: body };
+                                MongoClient.connect(url_mongodb, function(err, db){
+                                    if (err) throw err;
+                                    const dbo = db.db("restaurant");
+                                    dbo.collection("weather").insertOne(objectParams, function (err, res){
+                                        if (err) throw err;
+                                        console.log("1 weather query saved");
+                                        db.close();
+                                    });
+                                });
+                                return res.status(200).json({ source: 'OpenWeather API', ...responseJSON, });
+                            })
+                            .catch((error) => {
+                                if (error.message) {
+                                    // Request made and server responded
+                                    console.log("Error:" + error.message);
+                                } else if (error.request) {
+                                    // The request was made but no response received
+                                    console.log("No repsonse for: " + error.request);
+                                    res.sendStatus(204).json({ message: "No response from OpenWeather API" });
+                                } else {
+                                    //  Something happenned in setting up the request that trigged an Error
+                                    console.log('Error', error.message);
+                                    res.sendStatus(400).json({ message: error.message });
+                                }
                             });
-                            return res.status(200).json({ source: 'OpenWeather API', ...responseJSON, });
-                        })
-                        .catch((error) => {
-                            if (error.message) {
-                                // Request made and server responded
-                                console.log("Error:" + error.message);
-                            } else if (error.request) {
-                                // The request was made but no response received
-                                console.log("No repsonse for: " + error.request);
-                                res.sendStatus(204).json({ message: "No response from OpenWeather API" });
-                            } else {
-                                //  Something happenned in setting up the request that trigged an Error
-                                console.log('Error', error.message);
-                                res.sendStatus(400).json({ message: error.message });
-                            }
-                        });
-                }
+                    }
+                    db.close();
+                });
             });
         }
     });
